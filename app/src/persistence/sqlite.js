@@ -18,7 +18,7 @@ function init() {
                 console.log(`Using sqlite database at ${location}`);
 
             db.run(
-                `CREATE TABLE IF NOT EXISTS products (code varchar(36), name varchar(255), quantity integer, color varchar(20), size varchar(3), price money);
+                `CREATE TABLE IF NOT EXISTS products (code varchar(36), name varchar(255), quantity integer);
                  CREATE TABLE IF NOT EXISTS customers (gmail varchar(255), name varchar(255), phone varchar(255), score integer); 
                 `,
                 (err, result) => {
