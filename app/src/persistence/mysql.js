@@ -34,7 +34,7 @@ async function init() {
 
     return new Promise((acc, rej) => {
         pool.query(
-            'CREATE TABLE IF NOT EXISTS todo_items (id varchar(36), name varchar(255), completed boolean) DEFAULT CHARSET utf8mb4',
+            'CREATE TABLE IF NOT EXISTS products (code varchar(36), name varchar(255), quantity integer) DEFAULT CHARSET utf8mb4',
             err => {
                 if (err) return rej(err);
 
@@ -56,13 +56,11 @@ async function teardown() {
 
 async function getItems() {
     return new Promise((acc, rej) => {
-        pool.query('SELECT * FROM todo_items', (err, rows) => {
+        pool.query('SELECT * FROM products', (err, rows) => {
             if (err) return rej(err);
             acc(
                 rows.map(item =>
-                    Object.assign({}, item, {
-                        completed: item.completed === 1,
-                    }),
+                    Object.assign({}, item),
                 ),
             );
         });
@@ -71,13 +69,11 @@ async function getItems() {
 
 async function getItem(id) {
     return new Promise((acc, rej) => {
-        pool.query('SELECT * FROM todo_items WHERE id=?', [id], (err, rows) => {
+        pool.query('SELECT * FROM products WHERE code=?', [id], (err, rows) => {
             if (err) return rej(err);
             acc(
                 rows.map(item =>
-                    Object.assign({}, item, {
-                        completed: item.completed === 1,
-                    }),
+                    Object.assign({}, item),
                 )[0],
             );
         });
@@ -87,8 +83,8 @@ async function getItem(id) {
 async function storeItem(item) {
     return new Promise((acc, rej) => {
         pool.query(
-            'INSERT INTO todo_items (id, name, completed) VALUES (?, ?, ?)',
-            [item.id, item.name, item.completed ? 1 : 0],
+            'INSERT INTO products (code, name, quantity) VALUES (?, ?, ?)',
+            [item.code, item.name, item.quantity],
             err => {
                 if (err) return rej(err);
                 acc();
@@ -100,8 +96,8 @@ async function storeItem(item) {
 async function updateItem(id, item) {
     return new Promise((acc, rej) => {
         pool.query(
-            'UPDATE todo_items SET name=?, completed=? WHERE id=?',
-            [item.name, item.completed ? 1 : 0, id],
+            'UPDATE products SET quantity=? WHERE code = ?',
+            [item.quantity, id],
             err => {
                 if (err) return rej(err);
                 acc();
@@ -112,7 +108,7 @@ async function updateItem(id, item) {
 
 async function removeItem(id) {
     return new Promise((acc, rej) => {
-        pool.query('DELETE FROM todo_items WHERE id = ?', [id], err => {
+        pool.query('DELETE FROM products WHERE code = ?', [id], err => {
             if (err) return rej(err);
             acc();
         });
