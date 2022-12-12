@@ -1,6 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
-const location = process.env.SQLITE_DB_LOCATION || '/etc/todos/todo.db';
+const location = process.env.SQLITE_DB_LOCATION || '/etc/shop/shop.db';
 
 let db, dbAll, dbRun;
 
@@ -18,12 +18,16 @@ function init() {
                 console.log(`Using sqlite database at ${location}`);
 
             db.run(
-                'CREATE TABLE IF NOT EXISTS todo_items (id varchar(36), name varchar(255), completed boolean)',
+                `CREATE TABLE IF NOT EXISTS products (code varchar(36), name varchar(255), quantity integer, color varchar(20), size varchar(3), price money);
+                 CREATE TABLE IF NOT EXISTS customers (gmail varchar(255), name varchar(255), phone varchar(255), score integer); 
+                `,
                 (err, result) => {
                     if (err) return rej(err);
                     acc();
                 },
             );
+
+        
         });
     });
 }
@@ -39,13 +43,11 @@ async function teardown() {
 
 async function getItems() {
     return new Promise((acc, rej) => {
-        db.all('SELECT * FROM todo_items', (err, rows) => {
+        db.all('SELECT * FROM products', (err, rows) => {
             if (err) return rej(err);
             acc(
                 rows.map(item =>
-                    Object.assign({}, item, {
-                        completed: item.completed === 1,
-                    }),
+                    Object.assign({}, item)
                 ),
             );
         });
@@ -54,13 +56,11 @@ async function getItems() {
 
 async function getItem(id) {
     return new Promise((acc, rej) => {
-        db.all('SELECT * FROM todo_items WHERE id=?', [id], (err, rows) => {
+        db.all('SELECT * FROM products WHERE code=?', [id], (err, rows) => {
             if (err) return rej(err);
             acc(
                 rows.map(item =>
-                    Object.assign({}, item, {
-                        completed: item.completed === 1,
-                    }),
+                    Object.assign({}, item),
                 )[0],
             );
         });
@@ -70,8 +70,8 @@ async function getItem(id) {
 async function storeItem(item) {
     return new Promise((acc, rej) => {
         db.run(
-            'INSERT INTO todo_items (id, name, completed) VALUES (?, ?, ?)',
-            [item.id, item.name, item.completed ? 1 : 0],
+            'INSERT INTO products (code, name, quantity) VALUES (?, ?, ?)',
+            [item.code, item.name, item.quantity],
             err => {
                 if (err) return rej(err);
                 acc();
@@ -83,8 +83,8 @@ async function storeItem(item) {
 async function updateItem(id, item) {
     return new Promise((acc, rej) => {
         db.run(
-            'UPDATE todo_items SET name=?, completed=? WHERE id = ?',
-            [item.name, item.completed ? 1 : 0, id],
+            'UPDATE products SET quantity=? WHERE code = ?',
+            [item.quantity, id],
             err => {
                 if (err) return rej(err);
                 acc();
@@ -95,7 +95,7 @@ async function updateItem(id, item) {
 
 async function removeItem(id) {
     return new Promise((acc, rej) => {
-        db.run('DELETE FROM todo_items WHERE id = ?', [id], err => {
+        db.run('DELETE FROM products WHERE code = ?', [id], err => {
             if (err) return rej(err);
             acc();
         });

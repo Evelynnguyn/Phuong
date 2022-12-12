@@ -1,17 +1,13 @@
 function App() {
     const { Container, Row, Col } = ReactBootstrap;
     return (
-        <Container>
-            <Row>
-                <Col md={{ offset: 3, span: 6 }}>
-                    <TodoListCard />
-                </Col>
-            </Row>
+        <Container className="d-flex flex-column">
+            <ProductListCard />
         </Container>
     );
 }
 
-function TodoListCard() {
+function ProductListCard() {
     const [items, setItems] = React.useState(null);
 
     React.useEffect(() => {
@@ -29,7 +25,7 @@ function TodoListCard() {
 
     const onItemUpdate = React.useCallback(
         item => {
-            const index = items.findIndex(i => i.id === item.id);
+            const index = items.findIndex(i => i.code === item.code);
             setItems([
                 ...items.slice(0, index),
                 item,
@@ -41,7 +37,7 @@ function TodoListCard() {
 
     const onItemRemoval = React.useCallback(
         item => {
-            const index = items.findIndex(i => i.id === item.id);
+            const index = items.findIndex(i => i.code === item.code);
             setItems([...items.slice(0, index), ...items.slice(index + 1)]);
         },
         [items],
@@ -53,12 +49,12 @@ function TodoListCard() {
         <React.Fragment>
             <AddItemForm onNewItem={onNewItem} />
             {items.length === 0 && (
-                <p className="text-center">You have no todo items yet! Add one above!</p>
-            )}
+                <p className="text-center">You have no product yet! Add one above!</p>
+            )} 
             {items.map(item => (
                 <ItemDisplay
                     item={item}
-                    key={item.id}
+                    key={item.code}
                     onItemUpdate={onItemUpdate}
                     onItemRemoval={onItemRemoval}
                 />
@@ -70,22 +66,34 @@ function TodoListCard() {
 function AddItemForm({ onNewItem }) {
     const { Form, InputGroup, Button } = ReactBootstrap;
 
-    const [newItem, setNewItem] = React.useState('');
+    const [name,setName] = React.useState('');
+    const [code,setCode] = React.useState('');
+    const [quantity, setQuantity] = React.useState(0);
+
     const [submitting, setSubmitting] = React.useState(false);
 
     const submitNewItem = e => {
+        // construct item
+        const item = { 
+            name: name,
+            code: code,
+            quantity: quantity
+        }
+
         e.preventDefault();
         setSubmitting(true);
         fetch('/items', {
             method: 'POST',
-            body: JSON.stringify({ name: newItem }),
+            body: JSON.stringify(item),
             headers: { 'Content-Type': 'application/json' },
         })
             .then(r => r.json())
             .then(item => {
                 onNewItem(item);
                 setSubmitting(false);
-                setNewItem('');
+                setName('');
+                setCode('');
+                setQuantity(0);
             });
     };
 
@@ -93,17 +101,31 @@ function AddItemForm({ onNewItem }) {
         <Form onSubmit={submitNewItem}>
             <InputGroup className="mb-3">
                 <Form.Control
-                    value={newItem}
-                    onChange={e => setNewItem(e.target.value)}
+                    value={name}
+                    onChange={e => setName(e.target.value)}
                     type="text"
-                    placeholder="New Item"
+                    placeholder="Name"
+                    aria-describedby="basic-addon1"
+                />
+                <Form.Control
+                    value={code}
+                    onChange={e => setCode(e.target.value)}
+                    type="text"
+                    placeholder="Code"
+                    aria-describedby="basic-addon1"
+                />
+                <Form.Control
+                    value={quantity}
+                    onChange={e => setQuantity(e.target.value)}
+                    type="number"
+                    placeholder="Quantity"
                     aria-describedby="basic-addon1"
                 />
                 <InputGroup.Append>
                     <Button
                         type="submit"
                         variant="success"
-                        disabled={!newItem.length}
+                        disabled={!code.length || !name.length}
                         className={submitting ? 'disabled' : ''}
                     >
                         {submitting ? 'Adding...' : 'Add Item'}
@@ -115,51 +137,69 @@ function AddItemForm({ onNewItem }) {
 }
 
 function ItemDisplay({ item, onItemUpdate, onItemRemoval }) {
-    const { Container, Row, Col, Button } = ReactBootstrap;
+    const { Container, Row, Col, Button, Form, InputGroup } = ReactBootstrap;
 
-    const toggleCompletion = () => {
-        fetch(`/items/${item.id}`, {
+    const [quantity, setQuantity] = React.useState(item.quantity);
+    const [updating, setUpdating] = React.useState(false);
+
+    const toggleUpdate = () => {
+        setUpdating(true);
+        fetch(`/items/${item.code}`, {
             method: 'PUT',
             body: JSON.stringify({
-                name: item.name,
-                completed: !item.completed,
+                quantity: quantity,
             }),
             headers: { 'Content-Type': 'application/json' },
         })
             .then(r => r.json())
-            .then(onItemUpdate);
+            .then(item => {
+                onItemUpdate(item);
+                setUpdating(false);
+            });
     };
 
     const removeItem = () => {
-        fetch(`/items/${item.id}`, { method: 'DELETE' }).then(() =>
+        fetch(`/items/${item.code}`, { method: 'DELETE' }).then(() =>
             onItemRemoval(item),
         );
     };
 
     return (
-        <Container fluid className={`item ${item.completed && 'completed'}`}>
+        <Container fluid >
             <Row>
-                <Col xs={1} className="text-center">
-                    <Button
-                        className="toggles"
-                        size="sm"
-                        variant="link"
-                        onClick={toggleCompletion}
-                        aria-label={
-                            item.completed
-                                ? 'Mark item as incomplete'
-                                : 'Mark item as complete'
-                        }
-                    >
-                        <i
-                            className={`far ${
-                                item.completed ? 'fa-check-square' : 'fa-square'
-                            }`}
-                        />
-                    </Button>
-                </Col>
                 <Col xs={10} className="name">
-                    {item.name}
+                <Form onSubmit={toggleUpdate}>
+                    <InputGroup className="mb-3">
+                        <Form.Control
+                            disabled="true"
+                            type="text"
+                            placeholder={item.code}
+                            aria-describedby="basic-addon1"
+                        />
+                        <Form.Control
+                            disabled="true"
+                            type="text"
+                            placeholder={item.name}
+                            aria-describedby="basic-addon1"
+                        />
+                        <Form.Control
+                            value={quantity}
+                            onChange={e => setQuantity(e.target.value)}
+                            type="number"
+                            placeholder={quantity}
+                            aria-describedby="basic-addon1"
+                        />
+                        <InputGroup.Append>
+                            <Button
+                                type="submit"
+                                variant="success"
+                                className={updating ? 'disabled' : ''}
+                            >
+                                {updating ? 'Updating...' : 'Update'}
+                            </Button>
+                        </InputGroup.Append>
+                    </InputGroup>
+                </Form>
                 </Col>
                 <Col xs={1} className="text-center remove">
                     <Button
